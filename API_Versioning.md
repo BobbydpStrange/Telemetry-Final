@@ -1,20 +1,30 @@
 # API Versions:
 We implemented different API versions utilizing different version numbers being passed via the request’s headers. We used this in 3 spots - getting a teacher’s students, getting a student’s practice score, and getting recordings. Here is an example getting a teacher’s students
 ## __Steps__
-1. __Setup your request__
-    - `var request = new HttpRequestMessage(HttpMethod.Get, $"api/PianoLessons/students/{teacherId}");`
-2. __Add your header using a key-value pair__
-    - `string version = "1.0";`
-    - ` request.Headers.Add("version",version);`
-3. __Send your request__
-    - `var response = await client.SendAsync(request);`
-4. __Catch and handle your request on the API__
-    -  You can index the Request.Headers using the key you added earlier. If it exists thenyou will get your value.
-     ![catch and handle request](images/image2.png)
-5. __If you then want to send data back to your frontend service (like a list of students), you can return and deserialize it.__
-    - Good practice to only do so if success
-    - Read the content as a json string
-    - Deserialize that json string, telling it what object to map into.
-    ![Send to frontend](images/image3.png)
-    - Note: The json string will default to a lowercase first letter (then normal camel case), so you may have to declare in your class object what json name it has
-    ![Json string](images/image1.png)
+1. Create two HttpClients with their set headers and register your service, injecting both client in
+    - image
+    - `builder.Services.AddSingleton<PianoLessonsService>(provider =>
+		{
+			var clientV1 = provider.GetRequiredService<IHttpClientFactory>().CreateClient("v1");
+			var clientV2 = provider.GetRequiredService<IHttpClientFactory>().CreateClient("v2");
+
+			return new PianoLessonsService(clientV1, clientV2);
+		});`
+2. __Inject both client into your service via the contructor__
+    - `private readonly HttpClient clientV1;
+	private readonly HttpClient clientV2;
+
+    public PianoLessonsService(HttpClient clientV1, HttpClient clientV2)
+    {
+        this.clientV1 = clientV1;
+		this.clientV2 = clientV2;
+	}`
+3. __Make your request with the client that has your desired version__
+    - `return await clientV1.GetFromJsonAsync<List<Student>>($"api/PianoLessons/students/{teacherId}");
+	    return await clientV2.GetFromJsonAsync<List<Student>>($"api/PianoLessons/students/{teacherId}");`
+4. __We created this class so we can declare the version as a header attribute__
+    - image 2
+5. __Create an endpoint for each desired version like so__
+    - image 3
+    - The request should automatically map to the endpoint that has the desired version
+    - The functions return a IActionResult now, so merely wrap what you want to return in an Ok() function
