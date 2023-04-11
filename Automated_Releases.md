@@ -3,3 +3,5 @@ We implemented different API versions utilizing different version numbers being 
 ## __Steps__
 1. __Setup your request__
      ![catch and handle request](images/image2.png)
+     push origin with tag.
+     pull

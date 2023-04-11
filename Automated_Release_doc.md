@@ -1,5 +1,6 @@
 - Make sure paths match with current project.
-- Change dotnet 7 and mainservice.csproj target framework matches run line.
+- Change dotnet 7 and mainservice.csproj target framework matches run 
+line.
 ```
 name: CI Build
 
