@@ -7,7 +7,8 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
 ## __Steps__
 1. __Add your workflow file__
      - In file view on Visual Sudio if you go to file view in solution explorer you will see a .github folder. Inside this folder are the workflows that you'll make or have. From here you can add the yml file and add in the text.
-     (image1)
+
+     ![catch and handle request](images/Automated_1.png)
 
 2. __Name the workflow and have it run on tags__
      - Name speifies the name of that section that will show up on GitHub. These can be named anything as long as you know and understand what it is and does.
@@ -16,7 +17,8 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
      - text
      (image2)
      - If another job needs another one it will need the `needs:` header along with the name of that job. For instance this image is referencing *line 15* in the previous image.
-     (image3)
+     
+     ![catch and handle request](images/Automated_3.png)
 
 4. __Check file paths and net versions__
      - a problem that can occur if your not careful is if your dotnet versions arn't the same as the one for the project.

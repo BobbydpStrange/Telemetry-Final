@@ -2,78 +2,127 @@
 - Change dotnet 7 and mainservice.csproj target framework matches run 
 line.
 ```
-name: CI Build
-
+name: Build and deploy .NET Core application to Web App PianoLessonsApi and Maui PianoLessons
 on:
   push:
-    Tags:
-        -"V*.*.*"
-    Jobs:
-        build-android:
-            runs-on: windows-2022
-            name: Android Build
-            steps:
-            - name: Checkout
-                uses: actions/checkout@v2
+    branches:
+      - master
+    tags:
+      - "V*.*"
+env:
+  AZURE_WEBAPP_NAME: PianoLessonsApi
+  AZURE_WEBAPP_PACKAGE_PATH: PianoLessonsApi/publish
+  CONFIGURATION: Release
+  DOTNET_CORE_VERSION: 7.0.x
+  WORKING_DIRECTORY: PianoLessonsApi
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+    - name: Restore
+      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
+    - name: Build
+      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+    - name: Test
+      run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
+    - name: Publish
+      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+    - name: Publish Artifacts
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: webapp
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v2
+      with:
+        name: webapp
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+    - name: Deploy to Azure WebApp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.PianoLessonsApi_C730 }}
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        
+  build-android:
+       runs-on: windows-2022
+       needs: build
+       name: Android Build
+       steps:
+       - name: Checkout
+         uses: actions/checkout@v2
 
-            - name: Setup .NET 7
-                uses: actions/setup-dotnet@v1
-                with:
-                dotnet-version: 6.0.x
-                include-prerelease: true
+       - name: Setup .NET 7
+         uses: actions/setup-dotnet@v1
+         with:
+           dotnet-version: 7.0.x
+           include-prerelease: true
 
-            - uses: actions/setup-java@v2
-                with:
-                distribution: 'microsoft'
-                java-version: '11'
+       - uses: actions/setup-java@v2
+         with:
+           distribution: 'microsoft'
+           java-version: '11'
 
-            - name: Install MAUI Workloads
-                run: |
-                dotnet workload install android --ignore-failed-sources
-                dotnet workload install maui --ignore-failed-sources
+       - name: Install MAUI Workloads
+         run: |
+           dotnet workload install android --ignore-failed-sources
+           dotnet workload install maui --ignore-failed-sources
 
-            - name: Restore Dependencies
-                run: dotnet restore src/MauiBeach/MauiBeach.csproj
+       - name: Restore Dependencies
+         run: dotnet restore PianoLessons/PianoLessons.csproj
 
-            - name: Build MAUI Android
-                run: dotnet build src/MauiBeach/MauiBeach.csproj -c Release -f net6.0-android --no-restore
+       - name: Build MAUI Android
+         run: dotnet build PianoLessons/PianoLessons.csproj -c Release -f net7.0-android --no-restore
 
-            - name: Upload Android Artifact
-                uses: actions/upload-artifact@v2.3.1
-                with:
-                name: android-ci-build
-                path: src/MauiBeach/bin/Release/net6.0-android/*Signed.a*
-        build-windows:
-            runs-on: windows-2022
-            name: Windows Build
-            steps:
-            - name: Checkout
-                uses: actions/checkout@v2
+       - name: Upload Android Artifact
+         uses: actions/upload-artifact@v2.3.1
+         with:
+           name: android-ci-build
+           path: PianoLessons/bin/Release/net7.0-android/*Signed.a*
+          
+  build-windows:
+       runs-on: windows-2022
+       name: Windows Build
+       needs: build
+       steps:
+       - name: Checkout
+         uses: actions/checkout@v2
 
-            - name: Setup .NET 7
-                uses: actions/setup-dotnet@v1
-                with:
-                dotnet-version: 6.0.x
-                include-prerelease: true
+       - name: Setup .NET 7
+         uses: actions/setup-dotnet@v1
+         with:
+           dotnet-version: 7.0.x
+           include-prerelease: true
 
-            - name: Setup MSBuild
-                uses: microsoft/setup-msbuild@v1.1
-                with:
-                vs-prerelease: true
+       - name: Setup MSBuild
+         uses: microsoft/setup-msbuild@v1.1
+         with:
+           vs-prerelease: true
 
-            - name: Install MAUI Workloads
-                run: |
-                dotnet workload install maui --ignore-failed-sources
+       - name: Install MAUI Workloads
+         run: |
+           dotnet workload install maui --ignore-failed-sources
 
-            - name: Restore Dependencies
-                run: dotnet restore src/MauiBeach/MauiBeach.csproj
+       - name: Restore Dependencies
+         run: dotnet restore PianoLessons/PianoLessons.csproj
 
-            - name: Build MAUI Windows
-                run: msbuild src/MauiBeach/MauiBeach.csproj -r -p:Configuration=Release -p:RestorePackages=false -p:TargetFramework=net7.0-windows10.0.19041 /p:GenerateAppxPackageOnBuild=true
+       - name: Build MAUI Windows
+         run: msbuild PianoLessons/PianoLessons.csproj -r -p:Configuration=Release -p:RestorePackages=false -p:TargetFramework=net7.0-windows10.0.19041.0 /p:GenerateAppxPackageOnBuild=true
 
-            - name: Upload Windows Artifact
-                uses: actions/upload-artifact@v2.3.1
-                with:
-                name: windows-ci-build
-                path: src/MauiBeach/bin/Release/net7.0-windows*/**/MauiBeach*.msix
+       - name: Upload Windows Artifact
+         uses: actions/upload-artifact@v2.3.1
+         with:
+           name: windows-ci-build
+           path: PianoLessons/bin/Release/net7.0-windows*/**/PianoLessons*.msix
+      
+
 ```
