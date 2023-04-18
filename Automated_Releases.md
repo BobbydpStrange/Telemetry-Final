@@ -7,23 +7,34 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
 ## __Steps__
 1. __Add your workflow file__
      - In file view on Visual Sudio if you go to file view in solution explorer you will see a .github folder. Inside this folder are the workflows that you'll make or have. From here you can add the yml file and add in the text.
-
-     ![catch and handle request](images/Automated_1.png)
+     <div style="text-align: center">
+     <img src="images/Automated_1.png" />
+     </div>
+     
 
 2. __Name the workflow and have it run on tags__
      - Name speifies the name of that section that will show up on GitHub. These can be named anything as long as you know and understand what it is and does.
      - On push will always start the file and specify that what is to come next will happen whenever the project is pushed. For instance in the following image we are specifying when ever pushed on the master branch or a version tag is made with the same format.
-
-     ![catch and handle request](images/Automated_2.png)
+     <div style="text-align: center">
+     <img src="images/Automated_2.png" />
+     </div>
+     
      - You will also want to make sure to add the environment.
-     ![catch and handle request](images/Automated_3.png)
+
+    <div style="text-align: center">
+     <img src="images/Automated_3.png" />
+     </div>
 3. __Add the jobs you want to do__
      - text
 
-     ![catch and handle request](images/Automated_4.png)
+     <div style="text-align: center">
+     <img src="images/Automated_4.png" />
+     </div>
      - If another job needs another one it will need the `needs:` header along with the name of that job. For instance this image is referencing *line 15* in the previous image.
 
-     ![catch and handle request](images/Automated_5.png)
+     <div style="text-align: center">
+     <img src="images/Automated_5.png" />
+     </div>
      - 
 
 4. __Check file paths and net versions__
@@ -35,14 +46,20 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
      - To check if your workflow is running go to the projects repository in GitHub.
      - Then click on the actions tab
 
-     ![catch and handle request](images/Automated_6.png)
+     <div style="text-align: center">
+     <img src="images/Automated_6.png" />
+     </div>
      - On the left side of the window you should see an Actions section. This will show all individual workflows you have or all of them and can simply click on the one you want to see.
      
-     ![catch and handle request](images/Automated_7.png)
+     <div style="text-align: center">
+     <img src="images/Automated_7.png" />
+     </div>
      - From there you will see all the commits that had been pushed to github and that ran the workflow file. When you click on a given commit you can see how the different jobs went when pushing the project.
      - If you scroll down to the bottom of the page you should see an atrifacts section that has those versions of the apps/jobs.
      
-     ![catch and handle request](images/Automated_8.png)
+     <div style="text-align: center">
+     <img src="images/Automated_8.png" />
+     </div>
      
 7. __Possible problems__
      - Make the app not dependent on the shared project and instead make a shared folder with a data folder inside and link existing files to the shared files.
