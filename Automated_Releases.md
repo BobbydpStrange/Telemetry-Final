@@ -39,7 +39,7 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
           git push origin master // you can replace master with the branch you want to push to.
 
           //This shows how you would push with specific tags
-          git tag v1.0
+          git tag V1.0
           git push --tags
           ```
 
