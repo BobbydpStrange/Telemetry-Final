@@ -6,20 +6,20 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
 
 ## __Steps__
 1. __Add your workflow file__
-     - In file view on Visual Sudio if you go to file view in solution explorer you will see a .github folder. Inside this folder are the workflows that you'll make or have. From here you can add the yml file and add in the text.
+     - In file view on Visual Studio if you go to file view in solution explorer you will see a .github folder. Inside this folder are the workflows that you'll make or have. From here you can add the yml file and add in the text.
      
      ![catch and handle request](images/Automated_1.png)
 
 2. __Name the workflow and have it run on tags__
      - Name speifies the name of that section that will show up on GitHub. These can be named anything as long as you know and understand what it is and does.
-     - On push will always start the file and specify that what is to come next will happen whenever the project is pushed. For instance in the following image we are specifying when ever pushed on the master branch or a version tag is made with the same format.
+     - On push will always start the file and specify that what is to come next will happen whenever the project is pushed. For instance, in the following image we are specifying when ever pushed on the master branch or a version tag is made with the same format this file will run.
 
      ![catch and handle request](images/Automated_2.png)
      - You will also want to make sure to add the environment.
 
      ![catch and handle request](images/Automated_3.png)
 3. __Add the jobs you want to do__
-     - text
+     - Jobs are the tasks the file will do. For instance, the first job in this image is build and runs on ubuntu-latest. This job has specific steps that we have given it to do. When the file runs the system will go through each item in a job and if there is any exception or error that happends on the steps the job will fail. Just because a job fails however doesn't meant that the whole workflow has failed unless everything depends on that one job.
 
      ![catch and handle request](images/Automated_4.png)
      - If another job needs another one it will need the `needs:` header along with the name of that job. For instance this image is referencing *line 15* in the previous image.
@@ -31,7 +31,18 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
      - a problem that can occur if your not careful is if your dotnet versions arn't the same as the one for the project.
 
 5. __Push origin/Pull__
-     - 
+     - To push your file so your workflow will run you can simply push to github and this can be in terminal. If you are using tabs I would suggest using the following terminal commands.
+          ```c#
+          //This will simply push to a specific branch
+          git add .
+          git commit -m "message"
+          git push origin master // you can replace master with the branch you want to push to.
+
+          //This shows how you would push with specific tags
+          git tag v1.0
+          git push --tags
+          ```
+
 6. __Check GitHub__
      - To check if your workflow is running go to the projects repository in GitHub.
      - Then click on the actions tab
@@ -52,9 +63,7 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
      <OutputType Condition="'$(TargetFramework)' != 'net7.0'">Exe</OutputType>
      ```
      -.net workloads install maui, windows.
+
+8. __Run file__
      - open emulator, go to github page download apk and trust resources to run that version.
-     
-     <!-- ![catch and handle request](images/image2.png) -->
-     push origin with tag.
-     pull
 
