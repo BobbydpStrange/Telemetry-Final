@@ -25,7 +25,121 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
      - If another job needs another one it will need the `needs:` header along with the name of that job. For instance, this image is referencing *line 15* in the previous image.
 
      ![catch and handle request](images/Automated_5.png)
-     - 
+     - __*How to make the workflow file for separate files and update pictures to match current workflow file*__
+
+     3.1 __Android Job__
+     -  image
+   
+     - In this job we have six steps.
+          - Checkout
+               -    ```cs
+                         - name: Checkout
+                           uses: actions/checkout@v2 
+                    ``` 
+               - ex
+          - Setup .Net 7
+          ```cs
+               - name: Setup .NET 7
+                 uses: actions/setup-dotnet@v1
+                 with:
+                   dotnet-version: 7.0.x
+                   include-prerelease: true
+
+               - uses: actions/setup-java@v2
+                 with:
+                   distribution: 'microsoft'
+                   java-version: '11'
+          ```
+          - Install Maui Workloads
+          ```cs
+               - name: Install MAUI Workloads
+                 run: |
+                   dotnet workload install android --ignore-failed-sources
+                   dotnet workload install maui --ignore-failed-sources
+          ```
+          - Restore Dependencies
+          ```cs
+               - name: Restore Dependencies
+                 run: dotnet restore PianoLessons/PianoLessons.csproj
+          ```
+          - Build MAUI Android
+          ```cs
+               - name: Build MAUI Android
+                 run: dotnet build PianoLessons/PianoLessons.csproj -c Release -f net7.0-android --no-restore
+          ```
+          - Upload Android Artifact
+          ```cs
+               - name: Upload Android Artifact
+                 uses: actions/upload-artifact@v2.3.1
+                 with:
+                   name: android-ci-build
+                   path: PianoLessons/bin/Release/net7.0-android/*Signed.a*
+          ```
+     
+     3.2 __Windows Job__
+     - image
+     
+     - In this job we have eight steps.
+          - Checkout
+               -    ```cs
+                         - name: Checkout
+                           uses: actions/checkout@v2 
+                    ```
+          - Setup .Net 7
+               -    ```cs
+                         - name: Setup .NET 7
+                           uses: actions/setup-dotnet@v1
+                           with:
+                             dotnet-version: 7.0.x
+                             include-prerelease: true
+
+                         - uses: actions/setup-java@v2
+                           with:
+                             distribution: 'microsoft'
+                             java-version: '11'
+                    ```
+          - Setup MSBuild
+               -    ```cs
+                         - name: Setup MSBuild
+                           uses: microsoft/setup-msbuild@v1.1
+                           with:
+                             vs-prerelease: true
+                    ```
+          - Install MAUI Workloads
+               -    ```cs
+                         - name: Install MAUI Workloads
+                           run: |
+                             dotnet workload install maui --ignore-failed-sources
+                    ```
+          - Restore Dependencies
+               -    ```cs
+                         - name: Restore Dependencies
+                           run: dotnet restore PianoLessons/PianoLessons.csproj
+                    ```
+          - Build MAUI Windows
+               -    ```cs
+                           - name: Build MAUI Windows
+                             run: msbuild PianoLessons/PianoLessons.csproj -r -p:Configuration=Release -p:RestorePackages=false -p:TargetFramework=net7.0-windows10.0.19041.0 /p:GenerateAppxPackageOnBuild=true
+                    ```
+          - Output folder
+               -    ``` cs
+                         - name: Output folder
+                           run: |
+                             dir PianoLessons
+                             dir PianoLessons/bin
+                             dir PianoLessons/bin/Release
+                             dir PianoLessons/bin/Release/net7.0-windows10.0.19041.0
+                             dir PianoLessons/bin/Release/net7.0-windows10.0.19041.0/win10-x64
+                    ```
+          - Upload Windows Artifact
+               ```cs
+                    - name: Upload Windows Artifact
+                      uses: actions/upload-artifact@v2.3.1
+                      with:
+                         name: windows-ci-build
+                         path: PianoLessons/bin/Release/net7.0-windows/**/PianoLessons*.msix
+               ```
+
 
 4. __Check file paths and net versions__
      - a problem that can occur if you're not careful is if your dotnet versions aren't the same as the one for the project.
@@ -65,5 +179,5 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
      -.net workloads install maui, windows.
 
 8. __Run file__
-     - open the emulator, go to the GitHub page, download apk, and trust resources to run that version.
+     - open the emulator, go to the GitHub page, download apk, and trust resources to run that version. This will install that version of the app onto your device.
 
