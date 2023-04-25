@@ -1,12 +1,7 @@
-- Make sure paths match with current project.
-- Change dotnet 7 and mainservice.csproj target framework matches run 
-line.
-```
-name: Build and deploy .NET Core application to Web App PianoLessonsApi and Maui PianoLessons
+``` c#
+name: Build and deploy .NET Core application to Maui PianoLessons
 on:
   push:
-    branches:
-      - master
     tags:
       - "V*.*"
 env:
@@ -31,98 +26,114 @@ jobs:
     - name: Test
       run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
     - name: Publish
-      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+      run: |
+        dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
     - name: Publish Artifacts
       uses: actions/upload-artifact@v1.0.0
       with:
         name: webapp
         path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-  deploy:
-    runs-on: ubuntu-latest
+  build-android:
+    runs-on: windows-2022
+    needs: build
+    name: Android Build
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup .NET 7
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 7.0.x
+        include-prerelease: true
+
+    - uses: actions/setup-java@v2
+      with:
+        distribution: 'microsoft'
+        java-version: '11'
+
+    - name: Install MAUI Workloads
+      run: |
+        dotnet workload install android --ignore-failed-sources
+        dotnet workload install maui --ignore-failed-sources
+    - name: Restore Dependencies
+      run: dotnet restore PianoLessons/PianoLessons.csproj
+
+    - name: Build MAUI Android
+      run: dotnet build PianoLessons/PianoLessons.csproj -c Release -f net7.0-android --no-restore
+
+    - name: Upload Android Artifact
+      uses: actions/upload-artifact@v2.3.1
+      with:
+        name: android-ci-build
+        path: PianoLessons/bin/Release/net7.0-android/*Signed.a*
+
+  build-windows:
+    runs-on: windows-2022
+    name: Windows Build
     needs: build
     steps:
-    - name: Download artifact from build job
-      uses: actions/download-artifact@v2
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup .NET 7
+      uses: actions/setup-dotnet@v1
       with:
-        name: webapp
-        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-    - name: Deploy to Azure WebApp
-      uses: azure/webapps-deploy@v2
+        dotnet-version: 7.0.x
+        include-prerelease: true
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.1
       with:
-        app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        publish-profile: ${{ secrets.PianoLessonsApi_C730 }}
-        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-        
-  build-android:
-       runs-on: windows-2022
-       needs: build
-       name: Android Build
-       steps:
-       - name: Checkout
-         uses: actions/checkout@v2
+        vs-prerelease: true
 
-       - name: Setup .NET 7
-         uses: actions/setup-dotnet@v1
-         with:
-           dotnet-version: 7.0.x
-           include-prerelease: true
+    - name: Install MAUI Workloads
+      run: |
+        dotnet workload install maui --ignore-failed-sources
+    - name: Restore Dependencies
+      run: dotnet restore PianoLessons/PianoLessons.csproj
 
-       - uses: actions/setup-java@v2
-         with:
-           distribution: 'microsoft'
-           java-version: '11'
+    - name: Build MAUI Windows
+      run: msbuild PianoLessons/PianoLessons.csproj -r -p:Configuration=Release -p:RestorePackages=false -p:TargetFramework=net7.0-windows10.0.19041.0 /p:GenerateAppxPackageOnBuild=true
 
-       - name: Install MAUI Workloads
-         run: |
-           dotnet workload install android --ignore-failed-sources
-           dotnet workload install maui --ignore-failed-sources
+    - name: Publish Zipped Folder
+      run: msbuild PianoLessons/PianoLessons.csproj /restore /t:build /p:TargetFramework=net7.0-windows10.0.19041 /p:configuration=release /p:WindowsAppSDKSelfContained=true /p:Platform=x64 /p:WindowsPackageType=None /p:RuntimeIdentifier=win10-x64
 
-       - name: Restore Dependencies
-         run: dotnet restore PianoLessons/PianoLessons.csproj
+    - name: Upload Windows Artifact
+      uses: actions/upload-artifact@v2.3.1
+      with:
+        name: windows-ci-build
+        path: PianoLessons/bin/Release/net7.0-windows10.0.19041.0/win10-x64/*
 
-       - name: Build MAUI Android
-         run: dotnet build PianoLessons/PianoLessons.csproj -c Release -f net7.0-android --no-restore
-
-       - name: Upload Android Artifact
-         uses: actions/upload-artifact@v2.3.1
-         with:
-           name: android-ci-build
-           path: PianoLessons/bin/Release/net7.0-android/*Signed.a*
-          
-  build-windows:
-       runs-on: windows-2022
-       name: Windows Build
-       needs: build
-       steps:
-       - name: Checkout
-         uses: actions/checkout@v2
-
-       - name: Setup .NET 7
-         uses: actions/setup-dotnet@v1
-         with:
-           dotnet-version: 7.0.x
-           include-prerelease: true
-
-       - name: Setup MSBuild
-         uses: microsoft/setup-msbuild@v1.1
-         with:
-           vs-prerelease: true
-
-       - name: Install MAUI Workloads
-         run: |
-           dotnet workload install maui --ignore-failed-sources
-
-       - name: Restore Dependencies
-         run: dotnet restore PianoLessons/PianoLessons.csproj
-
-       - name: Build MAUI Windows
-         run: msbuild PianoLessons/PianoLessons.csproj -r -p:Configuration=Release -p:RestorePackages=false -p:TargetFramework=net7.0-windows10.0.19041.0 /p:GenerateAppxPackageOnBuild=true
-
-       - name: Upload Windows Artifact
-         uses: actions/upload-artifact@v2.3.1
-         with:
-           name: windows-ci-build
-           path: PianoLessons/bin/Release/net7.0-windows*/**/PianoLessons*.msix
-      
-
+    #- name: Release
+    #  uses: softprops/action-gh-release@v1
+    #  if: startsWith(github.ref, 'refs/tags/')
+    #  with:
+    #    files: ./windows-ci-build
+  
+  release-artifacts:
+    runs-on: windows-2022
+    name: Release Artifacts
+    needs: [build-windows, build-android]
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    #- name: Upload Release Asset
+    #  id: upload-release-asset 
+    #  uses: actions/upload-release-asset@v1
+    #  env:
+    #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #  with:
+    #    upload_url: ${{ steps.create_release.outputs.upload_url }} 
+    #    asset_path: ./my-artifact.zip
+    #    asset_name: my-artifact.zip
+    #    asset_content_type: application/zip
 ```
