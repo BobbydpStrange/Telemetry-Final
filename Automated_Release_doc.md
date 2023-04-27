@@ -1,4 +1,3 @@
-``` c#
 name: Build and deploy .NET Core application to Maui PianoLessons
 on:
   push:
@@ -11,6 +10,23 @@ env:
   DOTNET_CORE_VERSION: 7.0.x
   WORKING_DIRECTORY: PianoLessonsApi
 jobs:
+#--------------------------------------------------------------
+  begin-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+    - name: create-release
+      uses: actions/create-release@v1
+      id: create_release
+      with:
+        draft: false
+        prerelease: false
+        release_name: Release windows ${{ github.ref }}
+        tag_name: ${{ github.ref }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+#---------------------------------------------------------------
   build:
     runs-on: ubuntu-latest
     steps:
@@ -33,6 +49,7 @@ jobs:
       with:
         name: webapp
         path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
   build-android:
     runs-on: windows-2022
     needs: build
@@ -70,8 +87,9 @@ jobs:
 
   build-windows:
     runs-on: windows-2022
+    permissions: write-all
     name: Windows Build
-    needs: build
+    needs: [build, begin-release]
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -101,9 +119,13 @@ jobs:
 
     - name: Upload Windows Artifact
       uses: actions/upload-artifact@v2.3.1
+      env:
+         GITHUB_TOKEN: ${{ github.token }}
       with:
-        name: windows-ci-build
-        path: PianoLessons/bin/Release/net7.0-windows10.0.19041.0/win10-x64/*
+        upload_url: ${{ needs.begin-release.outputs.upload_url }}
+        asset_path: ./windows.zip
+        asset_name: windows_app.zip
+        asset_content_type: application/zip
 
     #- name: Release
     #  uses: softprops/action-gh-release@v1
@@ -111,21 +133,23 @@ jobs:
     #  with:
     #    files: ./windows-ci-build
   
-  release-artifacts:
-    runs-on: windows-2022
-    name: Release Artifacts
-    needs: [build-windows, build-android]
-    steps:
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
+  #release-artifacts:
+  #  runs-on: windows-2022
+  #  name: Release Artifacts
+  #  needs: [build-windows, build-android]
+  #  steps:
+  #  - name: Create Release
+  #    id: create_release
+  #    uses: actions/create-release@v1
+  #    env:
+  #      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #    with:
+  #      draft: false
+  #      prerelease: false
+  #      release_name: Release ${{ github.ref }}
+  #      tag_name: ${{ github.ref }}
+
+    
     #- name: Upload Release Asset
     #  id: upload-release-asset 
     #  uses: actions/upload-release-asset@v1
@@ -136,4 +160,3 @@ jobs:
     #    asset_path: ./my-artifact.zip
     #    asset_name: my-artifact.zip
     #    asset_content_type: application/zip
-```
