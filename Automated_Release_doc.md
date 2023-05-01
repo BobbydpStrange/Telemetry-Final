@@ -1,3 +1,4 @@
+```cs
 name: Build and deploy .NET Core application to Maui PianoLessons
 on:
   push:
@@ -128,21 +129,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
       with:
-        name: windows-ci-build
-        path: PianoLessons/bin/Release/net7.0-windows10.0.19041.0/win10-x64/*
-  
-  release-artifacts:
-    runs-on: windows-2022
-    name: Release Artifacts
-    needs: [build-windows, build-android]
-    steps:
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
+        upload_url: ${{ needs.begin-release.outputs.upload_url }}
+        asset_path: ./windows.zip
+        asset_name: windows_app.zip
+        asset_content_type: application/zip
+
+```

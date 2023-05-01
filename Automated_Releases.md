@@ -228,14 +228,19 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
      - If you scroll down to the bottom of the page you should see an artifacts section that has those versions of the apps/jobs.
      
           - ![catch and handle request](images/Automated_8.png)
-     
+
+     - __*Note:*__ This is if you didn't set it up with a release or have it saving the artifacts.
+          - if You included the artifacts should be saved as a release than you can just go to the __Code__ tab and on the right side there is a release section. This is where you will see all your releases everytime you push that file.
+               - ![catch and handle request](images/Automated_10.png)
+          - Inside that release will be the android and windows files at the top with the names we gave them and you can open them and run them just like you would have if you only had them as artifacts.
+               - ![catch and handle request](images/Automated_11.png)
 7. __Possible problems__
      - Make the app not dependent on the shared project and instead make a shared folder with a data folder inside and link existing files to the shared files.
      - If you get a .net 7 error for the project check in the maui.csproj and make sure you have .net7.0 for the target framework and 
      -    ```
           <OutputType Condition="'$(TargetFramework)' != 'net7.0'">Exe</OutputType>
           ```
-     - also make sure to go to settings on github > actions > and check read and write permissions. If you don't see the settings this is likley because you do not own the repository and will have to get the owner to fix the settings.
+     - Also make sure to go to settings on __github > actions > and check read and write permissions__. If you don't see the settings this is likley because you do not own the repository and will have to get the owner to fix the settings.
 
 8. __Run file__
      - open the emulator, go to the GitHub page, download apk, and trust resources to run that version. This will install that version of the app onto your device.
