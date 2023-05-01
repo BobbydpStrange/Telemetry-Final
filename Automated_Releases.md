@@ -2,7 +2,7 @@
 We implemented a GitHub Actions pipeline that only runs on tagged commits and releases a build for Android APK and Windows.
 
 *Note: If you need some help with writing the workflow file this blog could help.*
-[Blog.Taranissoftware.com/building-net-maui-apps-with-github-actions](https://blog.taranissoftware.com/building-net-maui-apps-with-github-actions)
+[Blog.Taranissoftware.com/building-net-maui-apps-with-github-actions](https://blog.taranissoftware.com/building-net-maui-apps-with-github-actions). The current workflow file is also saved as a file on github in this same project.
 
 ## __Steps__
 1. __Add your workflow file__
@@ -25,10 +25,63 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
      - If another job needs another one it will need the `needs:` header along with the name of that job. For instance, this image is referencing *line 15* in the previous image.
 
           - ![catch and handle request](images/Automated_5.png)
-     - # __*How to make the workflow file for separate files and update pictures to match current workflow file*__
+     3.1 __build__
+     - This job builds, tests, and publishes the .NET Core application.
+     ```cs
+          build:
+          runs-on: ubuntu-latest
+          steps:
+          - uses: actions/checkout@v2
+          - name: Setup .NET Core
+               uses: actions/setup-dotnet@v1
+               with:
+                 dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+          - name: Restore
+               run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
+          - name: Build
+               run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.   CONFIGURATION }} --no-restore
+          - name: Test
+               run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
+          - name: Publish
+               run: |
+                 dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+          - name: Publish Artifacts
+               uses: actions/upload-artifact@v1.0.0
+               with:
+                 name: webapp
+                 path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+     ```
 
-     3.1 __Android Job__
-   
+     3.2 __begin-release__
+     - This job sets up a release for github. It specifies the output called upload_url that can be used later.It also can give the step a unique identifyer with the id and specify that its going to use the release actions. Along with any other information it should know and the Github token. 
+          ```cs
+               begin-release:
+               runs-on: ubuntu-latest
+               outputs:
+                 upload_url: ${{ steps.create_release.outputs.upload_url }}
+               steps:
+               - name: create-release
+                 uses: actions/create-release@v1
+                 id: create_release
+                 with:
+                  draft: false
+                  prerelease: false
+                  release_name: Release windows ${{ github.ref }}
+                  tag_name: ${{ github.ref }}
+                 env:
+                  GITHUB_TOKEN: ${{ github.token }} 
+          ```
+
+     3.3 __Android Job__
+     - The start of the job sets up what its going to run on, permissions, jobs it needs,and the name
+          ```cs
+               build-android:
+                 runs-on: windows-2022
+                 permissions: write-all
+                 needs: [build, begin-release]
+                 name: Android Build
+                 steps:
+          ```
      - In this job we have six steps.
           - Checkout
                -    ```cs
@@ -56,10 +109,9 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
                -    ```cs
                          - name: Install MAUI Workloads
                          run: |
-                         dotnet workload install android --ignore-failed-sources
                          dotnet workload install maui --ignore-failed-sources
                     ```
-               - This step installs the android and maui workloads to be able to build the MAUI app specifically on android.
+               - This step installs maui workload to be able to build the MAUI app.
 
           - Restore Dependencies
                -    ```cs
@@ -77,17 +129,29 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
 
           - Upload Android Artifact
                -    ```cs
-                         - name: Upload Android Artifact
-                         uses: actions/upload-artifact@v2.3.1
+                         - name: upload android artifact-release
+                         uses: actions/upload-release-asset@v1
+                         env:
+                            GITHUB_TOKEN: ${{ github.token }}
                          with:
-                         name: android-ci-build
-                         path: PianoLessons/bin/Release/net7.0-android/*Signed.a*
+                           upload_url: ${{ needs.begin-release.outputs.upload_url }}
+                           asset_path: ./PianoLessons/bin/Release/net7.0-android/com.companyname.pianolessons-Signed.apk
+                           asset_name: PianoLessons.apk
+                           asset_content_type: application/zip
                     ```
-               - This step uses the specific upload artifact to complete and the path that the files that should be uploaded. The *Signed.a* will include any file that matches that pattern.
+               - This step uploads an android artifact to github release. We uses a specific actions for uploading the artifact and environment for the github. We then we upload a url that needs the begin-release job and sets it to outputs.upload_url. The asset path is the path through the files to get to the android artifact and we can then choose a name for that asset and the type of file it will be saved as.
 
      
-     3.2 __Windows Job__
-     
+     3.4 __Windows Job__
+     - The start of the job sets up what its going to run on, permissions, jobs it needs,and the name. It will look just like the android one but switch everything for windows.
+          ```cs
+               build-windows:
+                 runs-on: windows-2022
+                 permissions: write-all
+                 needs: [build, begin-release]
+                 name: Windows Build
+                 steps:
+          ```
      - In this job we have eight steps.
           - Checkout & Setup .Net 7
                - The Checkout and Setup will be the same as android.
@@ -115,26 +179,25 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
                              run: msbuild PianoLessons/PianoLessons.csproj -r -p:Configuration=Release -p:RestorePackages=false -p:TargetFramework=net7.0-windows10.0.19041.0 /p:GenerateAppxPackageOnBuild=true
                     ```
                - This uses the msbuild we've setup for the PianoLessons.csproj using the net7.0 framework.
-          - Output folder
+          - zip_file
                -    ``` cs
-                         - name: Output folder
+                         - name: zip_file
                            run: |
-                             dir PianoLessons
-                             dir PianoLessons/bin
-                             dir PianoLessons/bin/Release
-                             dir PianoLessons/bin/Release/net7.0-windows10.0.19041.0
-                             dir PianoLessons/bin/Release/net7.0-windows10.0.19041.0/win10-x64
+                               Compress-Archive -Path ./PianoLessons/bin/x64/release/net7.0-windows10.0.19041.0/win10-x64 -DestinationPath ./windows.zip
                     ```
-               - This step specifies the files that will have a build output for  the project and files for the windows platform.
+               - This step creates a zip archive of the given directory and names it windows.zip
           - Upload Windows Artifact
                -    ```cs
-                         - name: Upload Windows Artifact
-                         uses: actions/upload-artifact@v2.3.1
-                         with:
-                              name: windows-ci-build
-                              path: PianoLessons/bin/Release/net7.0-windows/**/PianoLessons*.msix
+                         - name: upload windows artifact-release
+                           uses: actions/upload-release-asset@v1
+                           env:
+                             GITHUB_TOKEN: ${{ github.token }}
+                           with:
+                             name: windows-ci-build
+                             path: PianoLessons/bin/Release/net7.0-windows10.0.19041.0/win10-x64/*
+
                     ```
-               - Like the android this will upload this step uses the specific upload artifact to complete and the path that the files that should be uploaded. Though specifically for the windows.
+               - Like the android this will upload the artifact that was created as a release.
 
 
 4. __Check file paths and net versions__
@@ -172,8 +235,9 @@ We implemented a GitHub Actions pipeline that only runs on tagged commits and re
      -    ```
           <OutputType Condition="'$(TargetFramework)' != 'net7.0'">Exe</OutputType>
           ```
-     - .net workloads install maui, windows.
+     - also make sure to go to settings on github > actions > and check read and write permissions. If you don't see the settings this is likley because you do not own the repository and will have to get the owner to fix the settings.
 
 8. __Run file__
      - open the emulator, go to the GitHub page, download apk, and trust resources to run that version. This will install that version of the app onto your device.
+     - you can do the same for windows but can just do it on your computer and go into the file made and find one with the icon of the product.(likely twards the middle of the files.)
 
